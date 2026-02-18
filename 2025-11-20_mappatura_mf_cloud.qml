@@ -4,6 +4,7 @@ import QtQuick.Layouts
 
 import org.qfield
 import org.qgis
+
 import Theme
 
 import "qrc:/qml" as QFieldItems
@@ -13,9 +14,16 @@ Item {
 
   property var mainWindow: iface.mainWindow()
   property var positionSource: iface.findItemByObjectName('positionSource')
+  property var templates: ({})
+
 
   Component.onCompleted: {
-    iface.addItemToPluginsToolbar(otmfButton)
+
+    loadTemplates();
+    iface.logMessage("[OTMF] templates: %1".arg(JSON.stringify(templates)));
+
+    iface.addItemToPluginsToolbar(otmfButton);
+    iface.logMessage("[OTMF] created otfm button");
   }
   
   QfToolButton {
@@ -92,11 +100,21 @@ Item {
 
         editableLayers.sort()
         layerSelector.model = editableLayers
-        //layerSelector.currentIndex = -1
-        //if (editableLayers.length > 0) {
-        //    layerSelector.currentIndex = 0
-        //}
+        
     }
+
+  function loadTemplates() {
+    
+    var rawTemplates = settings.value("project_templates", "{}")
+    iface.logMessage("[OTMF] raw templates loaded")
+    templates = JSON.parse(rawTemplates)
+    iface.logMessage("[OTMF] templates converted to JSON")
+  }
+
+  function saveTemplates() {
+    settings.setValue("project_templates", JSON.stringify(templates))
+    iface.logMessage("[OTMF] templates saved to settings")
+  }
 
   function otmfCreateNewWidget() {
 
