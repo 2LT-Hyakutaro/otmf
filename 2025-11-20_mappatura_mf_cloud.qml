@@ -14,6 +14,7 @@ Item {
 
   property var mainWindow: iface.mainWindow()
   property var positionSource: iface.findItemByObjectName('positionSource')
+  property var projectInfo: iface.findItemByObjectName('projectInfo')
   property var templates: ({})
 
 
@@ -26,6 +27,10 @@ Item {
     iface.logMessage("[OTMF] created otfm button");
   }
   
+  LayerResolver {
+    id: layerResolver
+  }
+
   QfToolButton {
     id: otmfButton
     //iconSource: 'icon.svg'
@@ -50,7 +55,7 @@ Item {
 
     anchors.centerIn: parent
     width: Math.min(700, parent.width - Theme.popupScreenEdgeMargin * 2)
-    height: 200
+    height: 500
 
     ColumnLayout {
       id: dialogLayout
@@ -67,21 +72,84 @@ Item {
       }
 
       ComboBox {
-                id: layerSelector
-                Layout.fillWidth: true
-                model: []                   // model is modified by 'updateLayers' when 'otmfButton' is clicked
-                enabled: model.length > 0
+        id: layerSelector
+        Layout.fillWidth: true
+        model: []                   // model is modified by 'updateLayers' when 'otmfButton' is clicked
+        enabled: model.length > 0
 
-                onActivated: index => {
+        onActivated: index => {
 
-                  mainWindow.displayToast(qsTr("Layer '%1' set as active").arg(layerSelector.currentText))             
+          // we want to show the correct form given the layer
+          let layerName = layerSelector.currentText        
+          let currentLayer = qgisProject.mapLayersByName(layerName)[0];
+                  
+                  //let f = currentLayer.getFeature(1);     // get a feature based on its id
+                  //let f2 = LayerUtils.duplicateFeature(currentLayer, f);
+                  //let r = LayerUtils.addFeature(currentLayer, f2);                                                                  
 
-                  // mostrare il form corretto per il layer selezionato
+          let toolbar = otmfFeatureForm.header.children[0];                                                   
+          let titleLabel = toolbar.children[1].children[1];
+
+          titleLabel.text = qsTr("New std. feature for '%1'").arg(layerName);                  
+                  
+          let fModel = otmfFeatureForm.model.featureModel;
+
+          fModel.currentLayer = currentLayer;
 
                   // salva il contenuto dei campi voluti dall'utente da qualche parte 
 
                   // crea il nuovo widget
                 }
+      }
+
+      QFieldItems.FeatureForm {
+
+        id: otmfFeatureForm
+        visible: true
+        Layout.fillWidth: true
+        topMargin: 20
+        bottomMargin: 20
+        leftMargin: 20
+        rightMargin: 20
+        isVertical: true
+        isDraggable: true
+        state: "Add"
+        //z: 10000
+        Layout.preferredHeight: 200
+        property var toolbar
+
+        model: AttributeFormModel {
+          id: attributeFormModel
+            featureModel: FeatureModel {
+            project: qgisProject
+          }
+        }
+
+
+        Component.onCompleted: {
+          
+          toolbar = otmfFeatureForm.header.children[0];
+          let saveButton = toolbar.children[1].children[0];
+          saveButton.onClicked.connect(saveNewStdFeature);
+          iface.logMessage("[OTMF] form correctly loaded");
+        }
+
+        onConfirmed: {
+          displayToast(qsTr("If my grandmother had wheels"));
+        }
+        onCancelled: {
+          displayToast(qsTr("she would have been a bike"));
+        }
+
+        function saveNewStdFeature() {        
+          iface.logMessage("hello i am debug message for saveNewStdFeature");
+
+          // save std feature to 'templates' 
+
+          // create new button and add to plugin toolbar 
+
+
+        }
       }
     }
   }
@@ -125,4 +193,23 @@ Item {
     updateLayers()
     otmfNewWidgetDialog.open()
   }
+
+  // for debugging   https://stackoverflow.com/questions/20293838/qml-list-all-object-members-properties-in-console
+  function listProperties(item, childrenOnly=true)
+  {
+    let str = ""
+
+    for (var p in item)
+    {
+        if( typeof item[p] != "function" ) {
+            
+            if(childrenOnly && p != "children")
+              continue;
+            
+            str = str + p + " -> " + item[p] + "\n"
+            
+        }
+    }
+    return str;
+}
 }
