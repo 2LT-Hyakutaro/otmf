@@ -20,28 +20,36 @@ Item {
   property var templates: ({})
   property var widgets: widgetContainer
   property var gpsWarning: true
+  property var globalAttributes: ({})
 
   Component.onCompleted: {
 
     templates = [
-  {
-    "layer_name" : "semafori",
-    "layer_color" : "yellow",
-    "feature_name" : "sem. completo",
-    "attributes" : {
-      "tipo" : "a lato + sopra",
-      "strada" : "p999"
-    }
-  }
-  ];
+      {
+        "layer_name" : "semafori",
+        "layer_color" : "yellow",
+        "feature_name" : "sem. completo",
+        "attributes" : {
+          "tipo" : "a lato + sopra",
+          "strada" : "p001"
+        }
+      }
+    ];
 
     //loadTemplates();
-    //iface.logMessage("[OTMF] templates: %1".arg(JSON.stringify(templates)));
+
+    // load global attributes
+    var rawGlobalAttr = settings.value("global_attributes", "{}")    
+    globalAttributes = JSON.parse(rawGlobalAttr)
+    iface.logMessage("[OTMF] global attributes settings:\n %1".arg(rawGlobalAttr))
 
     iface.addItemToPluginsToolbar(otmfButton);
-    iface.logMessage("[OTMF] created otfm button");
+  }
 
-    
+  // accessible from "settings > manage plugins"
+
+  function configure() {
+    settingsDialog.open();
   }
 
   QfToolButton {
@@ -64,6 +72,72 @@ Item {
     onClicked: {      
       plugin.otmfCreateNewWidget();
     }
+
+    onPressAndHold: {
+      settingsDialog.open();
+    }
+  }
+
+  Dialog {
+    id: settingsDialog
+
+    parent: plugin.mainWindow.contentItem
+    visible: false
+    modal: true
+    width: Math.min(400, mainWindow ? (mainWindow.width - 20) : 400)
+    height: mainWindow.height / 2
+    //height: Math.min(implicitHeight, mainWindow ? (mainWindow.height - 20) : implicitHeight)
+    title: qsTr("OTMF Plugin Settings")
+    standardButtons: Dialog.Ok | Dialog.Cancel
+     
+            GridLayout {
+                id: settingsGrid
+                rows: 3
+                flow: GridLayout.TopToBottom
+                anchors.centerIn: parent                
+
+                property var keys: Object.keys(plugin.globalAttributes)
+                property var values: Object.values(plugin.globalAttributes)                
+                
+                Label { text: qsTr("Field") }
+                TextField { 
+                  id: field1
+                  placeholderText: "Field 1";
+                  validator: RegularExpressionValidator{regularExpression: /\S+/}     // field must be non-empty
+                  text: settingsGrid.keys[0]                  
+                }     
+                TextField { 
+                  id: field2
+                  placeholderText: "Field 2"
+                  validator: RegularExpressionValidator{regularExpression: /\S+/}     // field must be non-empty
+                  text: settingsGrid.keys[1] 
+                }     
+
+                Label { text: qsTr("Value") }
+                TextField { id: value1; text: settingsGrid.values[0] }
+                TextField { id: value2; text: settingsGrid.values[1] }                
+            }
+
+    onAccepted: {  
+
+      let newAttributes = {}
+
+      if(field1.acceptableInput) {
+        newAttributes[field1.text] = value1.text
+        iface.logMessage("[OTMF] global attr. field (%1) = (%2)".arg(field1.text).arg(value1.text))
+      }
+
+      if(field2.acceptableInput) {
+      newAttributes[field2.text] = value2.text 
+        iface.logMessage("[OTMF] global attr. field (%1) = (%2)".arg(field2.text).arg(value2.text))
+      }
+
+      plugin.globalAttributes = newAttributes
+      settings.setValue("global_attributes", JSON.stringify(plugin.globalAttributes))
+      mainWindow.displayToast("Settings saved!")
+      iface.logMessage("[OTMF] new global attributes settings (str):\n %1".arg(JSON.stringify(plugin.globalAttributes)))  
+    }
+        
   }
 
   GridLayout {
@@ -134,7 +208,28 @@ Item {
           overlayFeatureFormDrawer.state = 'Add'
           overlayFeatureFormDrawer.open()
         }
+
+        Dialog {
+          id: deletionDialog
+          parent: mainWindow.contentItem
+          title: qsTr("Delete std.feature '%1'?".arg(modelData["feature_name"]))
+          standardButtons: Dialog.Ok | Dialog.Cancel
+
+          anchors.centerIn: parent
+          //width: Math.min(700, parent.width - Theme.popupScreenEdgeMargin * 2)
+          //height: 500
+
+          onAccepted: {
+            plugin.removeTemplate(modelData["feature_name"])
+          }
+        }
+
+        onPressAndHold: {
+          id: deletionDialog.open()          
       }
+      }
+
+      
     }
   }
 
@@ -258,6 +353,19 @@ Item {
         layerSelector.model = editableLayers
         
     }
+
+  function removeTemplate(id) {
+    
+    // select template to be removed
+    const findTemplateByFeatureName = (temp) => temp["feature_name"] === id
+    let i = templates.findIndex(findTemplateByFeatureName)
+
+    // remove template from model
+    templates.splice(i, 1)
+
+    iface.logMessage("[OTMF] template removed. templates: \n %1".arg(JSON.stringify(templates)))
+    mainWindow.displayToast("Template removed!")
+  }
 
   function loadTemplates() {
     
