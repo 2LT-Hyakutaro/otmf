@@ -17,15 +17,18 @@ Item {
   property var positionSource: iface.findItemByObjectName('positionSource')
   property var projectInfo: iface.findItemByObjectName('projectInfo')
   property var overlayFeatureFormDrawer: iface.findItemByObjectName('overlayFeatureFormDrawer')
-  property var templates: ({})
   property var widgets: widgetContainer
   property var gpsWarning: true
+  property var templates: ListModel {
+    id: templatesModel
+  }
   property var globalAttributes: ({})
 
   Component.onCompleted: {
 
-    templates = [
-      {
+    // mock feature init
+    const semaforo =  
+    {        
         "layer_name" : "semafori",
         "layer_color" : "yellow",
         "feature_name" : "sem. completo",
@@ -33,9 +36,10 @@ Item {
           "tipo" : "a lato + sopra",
           "strada" : "p001"
         }
-      }
-    ];
+    }    
+    templates.append(semaforo)
 
+    iface.logMessage("[OTMF] 'templates' model created")
     //loadTemplates();
 
     // load global attributes
@@ -153,7 +157,7 @@ Item {
         
         id: otmfWidgetButton
         required property var modelData
-        bgcolor: modelData["layer_color"]     
+        bgcolor: modelData["layer_color"]     // altrimenti accedi al ruolo layer_color
         enabled: true        
         round: false        
 
@@ -220,6 +224,7 @@ Item {
           //height: 500
 
           onAccepted: {
+            iface.logMessage("[otmf] removing template '%1'".arg(modelData["feature_name"]))
             plugin.removeTemplate(modelData["feature_name"])
           }
         }
@@ -357,14 +362,31 @@ Item {
   function removeTemplate(id) {
     
     // select template to be removed
-    const findTemplateByFeatureName = (temp) => temp["feature_name"] === id
-    let i = templates.findIndex(findTemplateByFeatureName)
+    let victim = null;
+
+    for ( let i=0 ; i < templates.count ; i++) {
+      
+      let t = templates.get(i)
+
+      iface.logMessage("[OTMF] checking element %1".arg(JSON.stringify(t)))
+
+      if(t["feature_name"] === id) {
+        victim = i;
+        break
+      } 
+    }
 
     // remove template from model
-    templates.splice(i, 1)
+    if(victim !== null) {
+      templates.remove(victim)
+      iface.logMessage("[OTMF] template removed. templates: \n %1".arg(JSON.stringify(templates)))
+      mainWindow.displayToast("Template removed!")
+    } 
+    else {
+      iface.logMessage("[OTMF] template NOT removed. no template matching id '%1'".arg(id))
+    }   
 
-    iface.logMessage("[OTMF] template removed. templates: \n %1".arg(JSON.stringify(templates)))
-    mainWindow.displayToast("Template removed!")
+    
   }
 
   function loadTemplates() {
