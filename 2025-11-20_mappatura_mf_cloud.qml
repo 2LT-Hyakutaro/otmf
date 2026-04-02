@@ -241,11 +241,13 @@ Item {
   Dialog {
     id: otmfNewWidgetDialog
     parent: mainWindow.contentItem
-    title: qsTr("Create a new replicable standard feature")
+    title: qsTr("Create a new replicable feature")
     standardButtons: Dialog.Ok | Dialog.Cancel
+    property var fieldsStringList 
+    property var newTemplateAttributes
 
     anchors.centerIn: parent
-    width: Math.min(700, parent.width - Theme.popupScreenEdgeMargin * 2)
+    width: Math.min(750, parent.width - Theme.popupScreenEdgeMargin * 2)
     height: 500
 
     ColumnLayout {
@@ -274,73 +276,52 @@ Item {
           let layerName = layerSelector.currentText        
           let currentLayer = qgisProject.mapLayersByName(layerName)[0];                                                                                                  
 
-          let toolbar = otmfFeatureForm.header.children[0];                                                   
-          let titleLabel = toolbar.children[1].children[1];
-
-          titleLabel.text = qsTr("New std. feature for '%1'").arg(layerName);                  
-                  
-          let fModel = otmfFeatureForm.model.featureModel;
-
-          fModel.currentLayer = currentLayer;
-
-                  // salva il contenuto dei campi voluti dall'utente da qualche parte 
-
-                  // crea il nuovo widget
-                }
+          otmfNewWidgetDialog.fieldsStringList = currentLayer.fields.names          
+          iface.logMessage("[otmf] selected layer fields -> %1".arg(otmfNewWidgetDialog.fieldsStringList))
+        }
       }
 
-      QFieldItems.FeatureForm {
+          GridLayout {
+          id: otmfFormGrid
+          rows: otmfNewWidgetDialog.fieldsStringList.length     // columns would be better
+          flow: GridLayout.TopToBottom
 
-        id: otmfFeatureForm
-        visible: true
-        Layout.fillWidth: true
-        topMargin: 20
-        bottomMargin: 20
-        leftMargin: 20
-        rightMargin: 20
-        isVertical: true
-        isDraggable: true
-        state: "Add"
-        //z: 10000
-        Layout.preferredHeight: 200
-        property var toolbar
+          Repeater {            
+            model: otmfNewWidgetDialog.fieldsStringList
 
-        model: AttributeFormModel {
-          id: attributeFormModel
-            featureModel: FeatureModel {
-            project: qgisProject
+            Label { text: modelData}
+          }
+
+          Repeater {            
+            model: otmfNewWidgetDialog.fieldsStringList
+
+            TextField {
+              onEditingFinished: {
+                otmfNewWidgetDialog.newTemplateAttributes[index] = text
+              }
+            }
           }
         }
-
-
-        Component.onCompleted: {
-          
-          toolbar = otmfFeatureForm.header.children[0];
-          let saveButton = toolbar.children[1].children[0];
-          saveButton.onClicked.connect(saveNewStdFeature);
-          iface.logMessage("[OTMF] form correctly loaded");
-        }
-
-        onConfirmed: {
-          mainWindow.displayToast(qsTr("If my grandmother had wheels"));
-        }
-        onCancelled: {
-          mainWindow.displayToast(qsTr("she would have been a bike"));
-        }
-
-        function saveNewStdFeature() {        
-          iface.logMessage("[OTMF] - hello i am debug message for saveNewStdFeature");
-
-
-          // save std feature to 'templates' 
-
-          // create new button and add to plugin toolbar 
-
-
-        }
-      }
     }
-  }
+
+        // here we save the input data
+        onAccepted: {
+          iface.logMessage("[otmf] saving new template")
+
+          let newTemplate;
+
+          fieldsStringList.forEach(
+            (field, index) => newTemplate[field] = newTemplateAttributes[index]
+          )
+
+          iface.logMessage("[otmf] attributes copied to new template")
+          
+
+
+          iface.logMessage("[otmf] save successful")
+        }
+    }
+    
 
       function updateLayers() {
         var layers = ProjectUtils.mapLayers(qgisProject)
