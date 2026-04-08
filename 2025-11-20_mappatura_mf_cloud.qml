@@ -19,43 +19,30 @@ Item {
   property var overlayFeatureFormDrawer: iface.findItemByObjectName('overlayFeatureFormDrawer')
   property var widgets: widgetContainer
   property var gpsWarning: true
-  property var templates: ListModel {
-    id: templatesModel
-  }
+  property var templates: ListModel {}
   property var globalAttributes: ({})
 
+  // end of init phase, so we want to retrieve all user settings from permanent storage
   Component.onCompleted: {
 
-    // mock feature init
-    const semaforo =  
-    {        
-        "layer_name" : "semafori",
-        "layer_color" : "yellow",
-        "feature_name" : "sem. completo",
-        "attributes" : {
-          "tipo" : "a lato + sopra",
-          "strada" : "p001"
-        }
-    }    
-    templates.append(semaforo)
-
-    iface.logMessage("[OTMF] 'templates' model created")
-    //loadTemplates();
+    loadTemplates();
 
     // load global attributes
     var rawGlobalAttr = settings.value("global_attributes", "{}")    
     globalAttributes = JSON.parse(rawGlobalAttr)
-    iface.logMessage("[OTMF] global attributes settings:\n %1".arg(rawGlobalAttr))
+    iface.logMessage("[otmf] global attributes settings:\n %1".arg(rawGlobalAttr))
 
     iface.addItemToPluginsToolbar(otmfButton);
   }
 
   // accessible from "settings > manage plugins"
-
   function configure() {
     settingsDialog.open();
   }
 
+  // the main plugin button
+  // tap to create a new template
+  // long press to change global attributes
   QfToolButton {
     id: otmfButton
     //iconSource: 'icon.svg'
@@ -198,19 +185,28 @@ Item {
           
           let newFeature = FeatureUtils.createFeature(layer, geometry);  
 
-          iface.logMessage("[OTMF] feature created: \n%1".arg(newFeature));
+          iface.logMessage("[OTMF] feature initialized. Copying attributes...");
 
-          // copy attributes from model to new feature
-          for (const [prop, value] of Object.entries(modelData["attributes"])) {
+          // copy attributes from model to new feature            
 
-            iface.logMessage("[OTMF] copying attribute '%1' -- value: '%2'".arg(prop).arg(value));            
-            newFeature.setAttribute(prop, value)
-          }          
+          // TODO set fid field from layer's feature count
+          for (const attr in modelData["attributes"])
+            newFeature.setAttribute(attr, modelData["attributes"][attr])            
+          
+          // copy attributes from global settings to new feature   
+          
+          for (const attr in globalAttributes)
+            newFeature.setAttribute(attr, globalAttributes[attr])   
 
-          overlayFeatureFormDrawer.featureModel.feature = newFeature
-          overlayFeatureFormDrawer.featureModel.resetAttributes(true)
-          overlayFeatureFormDrawer.state = 'Add'
-          overlayFeatureFormDrawer.open()
+          iface.logMessage("[OTMF] new attributes copied over");
+
+          // here we add the feature to the layer programmatically (no user input)
+
+          layer.startEditing()
+          LayerUtils.addFeature(layer, newFeature)
+          if ( layer.commitChanges() )            
+            iface.logMessage("[OTMF] new feature correctly added to layer");
+
         }
 
         Dialog {
@@ -219,9 +215,7 @@ Item {
           title: qsTr("Delete std.feature '%1'?".arg(modelData["feature_name"]))
           standardButtons: Dialog.Ok | Dialog.Cancel
 
-          anchors.centerIn: parent
-          //width: Math.min(700, parent.width - Theme.popupScreenEdgeMargin * 2)
-          //height: 500
+          anchors.centerIn: parent          
 
           onAccepted: {
             iface.logMessage("[otmf] removing template '%1'".arg(modelData["feature_name"]))
@@ -244,7 +238,7 @@ Item {
     title: qsTr("Create a new replicable feature")
     standardButtons: Dialog.Ok | Dialog.Cancel
     property var fieldsStringList 
-    property var newTemplateAttributes
+    property var newTemplate: ({})
 
     anchors.centerIn: parent
     width: Math.min(750, parent.width - Theme.popupScreenEdgeMargin * 2)
@@ -277,27 +271,42 @@ Item {
           let currentLayer = qgisProject.mapLayersByName(layerName)[0];                                                                                                  
 
           otmfNewWidgetDialog.fieldsStringList = currentLayer.fields.names          
-          iface.logMessage("[otmf] selected layer fields -> %1".arg(otmfNewWidgetDialog.fieldsStringList))
+          otmfNewWidgetDialog.newTemplate["layer_name"] = layerName
+          otmfNewWidgetDialog.newTemplate["layer_color"] = "yellow"
+          otmfNewWidgetDialog.newTemplate["feature_name"] = ""
+          otmfNewWidgetDialog.newTemplate["attributes"] = {}
+
+          iface.logMessage("[otmf] initializing newTemplate: %1".arg(JSON.stringify(otmfNewWidgetDialog.newTemplate)))
         }
       }
 
           GridLayout {
           id: otmfFormGrid
-          rows: otmfNewWidgetDialog.fieldsStringList.length     // columns would be better
+          rows: otmfNewWidgetDialog.fieldsStringList.length + 1     // columns would be better
           flow: GridLayout.TopToBottom
 
+          Label { text: "new feature name"}
           Repeater {            
             model: otmfNewWidgetDialog.fieldsStringList
 
             Label { text: modelData}
           }
 
+          TextField {
+            validator: RegularExpressionValidator{regularExpression: /\S+/}     // field must be non-empty
+
+            // only emitted if input is valid
+            onEditingFinished: {
+              otmfNewWidgetDialog.newTemplate["feature_name"] = text    
+            }
+          }
           Repeater {            
             model: otmfNewWidgetDialog.fieldsStringList
 
             TextField {
               onEditingFinished: {
-                otmfNewWidgetDialog.newTemplateAttributes[index] = text
+                let thisField = otmfNewWidgetDialog.fieldsStringList[index]
+                otmfNewWidgetDialog.newTemplate["attributes"][thisField] = text 
               }
             }
           }
@@ -305,20 +314,13 @@ Item {
     }
 
         // here we save the input data
-        onAccepted: {
-          iface.logMessage("[otmf] saving new template")
+        onAccepted: {         
 
-          let newTemplate;
+        iface.logMessage("[otmf] saving newTemplate: %1".arg(JSON.stringify(otmfNewWidgetDialog.newTemplate)))
 
-          fieldsStringList.forEach(
-            (field, index) => newTemplate[field] = newTemplateAttributes[index]
-          )
-
-          iface.logMessage("[otmf] attributes copied to new template")
-          
-
-
+          templates.append(otmfNewWidgetDialog.newTemplate)
           iface.logMessage("[otmf] save successful")
+          saveTemplates();
         }
     }
     
@@ -372,15 +374,28 @@ Item {
 
   function loadTemplates() {
     
-    var rawTemplates = settings.value("project_templates", "{}")
+    // first we get our data as a long string
+    let rawTemplates = settings.value("project_templates", "[]")
     iface.logMessage("[OTMF] raw templates loaded")
-    templates = JSON.parse(rawTemplates)
+
+    // then we convert it to array
+    let convertedTemplatesArray = JSON.parse(rawTemplates)
     iface.logMessage("[OTMF] templates converted to JSON")
+
+    // then we add each element to our 'templates' model
+    convertedTemplatesArray.forEach( (t) => templates.append(t))
+    iface.logMessage("[OTMF] templates model loaded! \n %1".arg(convertedTemplatesArray))
   }
 
-  function saveTemplates() {
-    settings.setValue("project_templates", JSON.stringify(templates))
-    iface.logMessage("[OTMF] templates saved to settings")
+  function saveTemplates() {    
+
+    let templatesModelAsArray = []
+    for(let i = 0; i < templates.count; i++) {
+      templatesModelAsArray.push(templates.get(i))
+    }
+
+    settings.setValue("project_templates", JSON.stringify(templatesModelAsArray))
+    iface.logMessage("[OTMF] templates saved to settings! \n %1".arg(JSON.stringify(templatesModelAsArray)))
   }
 
   function otmfCreateNewWidget() {
