@@ -1,3 +1,20 @@
+# `otmf` - One Tap, Multi Feature plugin for QField
+
+This QField plugin allows you to instantly place a feature on the map, without having to go through the Feature Form every time.
+Just fill in the feature fields in advance, and place it on the map or on your current location with the push of a button.
+Allows for the creation of different standard features ("templates") that can be replicated at any time by pressing the corresponding button.
+
+## Missing features
+
+- Support for geometries other than `Point`
+- Different colours for different features
+- Ability to add more than two global attributes
+- Ability to modify a template by long-pressing
+- Template order
+
+## Known bugs 
+- "fid" bug (feature count increases by 2 the first time)
+
 ### example `templates`
 
 ```

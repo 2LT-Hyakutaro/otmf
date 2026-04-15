@@ -21,6 +21,7 @@ Item {
   property var gpsWarning: true
   property var templates: ListModel {}
   property var globalAttributes: ({})
+  property var layerTree: iface.findItemByObjectName('dashBoard').layerTree
 
   // end of init phase, so we want to retrieve all user settings from permanent storage
   Component.onCompleted: {
@@ -33,6 +34,8 @@ Item {
     iface.logMessage("[otmf] global attributes settings:\n %1".arg(rawGlobalAttr))
 
     iface.addItemToPluginsToolbar(otmfButton);
+
+    iface.logMessage("[otmf debug] latertree: %1".arg(layerTree))  // .data(index)
   }
 
   // accessible from "settings > manage plugins"
@@ -61,7 +64,8 @@ Item {
     }
     
     onClicked: {      
-      plugin.otmfCreateNewWidget();
+      plugin.updateLayers()
+      otmfNewWidgetDialog.open()
     }
 
     onPressAndHold: {
@@ -77,7 +81,6 @@ Item {
     modal: true
     width: Math.min(400, mainWindow ? (mainWindow.width - 20) : 400)
     height: mainWindow.height / 2
-    //height: Math.min(implicitHeight, mainWindow ? (mainWindow.height - 20) : implicitHeight)
     title: qsTr("OTMF Plugin Settings")
     standardButtons: Dialog.Ok | Dialog.Cancel
      
@@ -140,11 +143,15 @@ Item {
     Repeater {
       model: plugin.templates
       
+
+      // the other main component of this plugin
+      // press to create a new feature according to the template
+      // long press to remove the corresponding template
       QfToolButton {
         
         id: otmfWidgetButton
         required property var modelData
-        bgcolor: modelData["layer_color"]     // altrimenti accedi al ruolo layer_color
+        bgcolor: modelData["layer_color"]     
         enabled: true        
         round: false        
 
@@ -209,6 +216,10 @@ Item {
 
         }
 
+        onPressAndHold: {
+          id: deletionDialog.open()          
+        }
+        
         Dialog {
           id: deletionDialog
           parent: mainWindow.contentItem
@@ -217,18 +228,13 @@ Item {
 
           anchors.centerIn: parent          
 
-          onAccepted: {
-            iface.logMessage("[otmf] removing template '%1'".arg(modelData["feature_name"]))
-            plugin.removeTemplate(modelData["feature_name"])
+          onAccepted: {            
+            plugin.removeTemplate(modelData["feature_name"])                       
           }
         }
 
-        onPressAndHold: {
-          id: deletionDialog.open()          
-      }
-      }
-
-      
+        
+      }      
     }
   }
 
@@ -332,7 +338,7 @@ Item {
         for (var id in layers) {
             var layer = layers[id]
 
-            if (layer && layer.supportsEditing && layer.geometryType) {
+            if (layer && layer.supportsEditing && layer.geometryType() == Qgis.GeometryType.Point ) {
                 editableLayers.push(layer.name)
             }
         }
@@ -350,9 +356,6 @@ Item {
     for ( let i=0 ; i < templates.count ; i++) {
       
       let t = templates.get(i)
-
-      iface.logMessage("[OTMF] checking element %1".arg(JSON.stringify(t)))
-
       if(t["feature_name"] === id) {
         victim = i;
         break
@@ -362,7 +365,8 @@ Item {
     // remove template from model
     if(victim !== null) {
       templates.remove(victim)
-      iface.logMessage("[OTMF] template removed. templates: \n %1".arg(JSON.stringify(templates)))
+      iface.logMessage("[OTMF] template '%1' removed".arg(id))
+      saveTemplates()
       mainWindow.displayToast("Template removed!")
     } 
     else {
@@ -376,15 +380,13 @@ Item {
     
     // first we get our data as a long string
     let rawTemplates = settings.value("project_templates", "[]")
-    iface.logMessage("[OTMF] raw templates loaded")
 
     // then we convert it to array
     let convertedTemplatesArray = JSON.parse(rawTemplates)
-    iface.logMessage("[OTMF] templates converted to JSON")
 
     // then we add each element to our 'templates' model
     convertedTemplatesArray.forEach( (t) => templates.append(t))
-    iface.logMessage("[OTMF] templates model loaded! \n %1".arg(convertedTemplatesArray))
+    iface.logMessage("[OTMF] templates model loaded! \n %1".arg(rawTemplates))
   }
 
   function saveTemplates() {    
@@ -397,33 +399,4 @@ Item {
     settings.setValue("project_templates", JSON.stringify(templatesModelAsArray))
     iface.logMessage("[OTMF] templates saved to settings! \n %1".arg(JSON.stringify(templatesModelAsArray)))
   }
-
-  function otmfCreateNewWidget() {
-
-    if(!otmfButton.enabled) {
-      return;
-    }
-
-    updateLayers()
-    otmfNewWidgetDialog.open()
-  }
-
-  // for debugging   https://stackoverflow.com/questions/20293838/qml-list-all-object-members-properties-in-console
-  function listProperties(item, childrenOnly=false)
-  {
-    let str = ""
-
-    for (var p in item)
-    {
-        if( typeof item[p] != "function" ) {
-            
-            if(childrenOnly && p != "children")
-              continue;
-            
-            str = str + p + " -> " + item[p] + "\n"
-            
-        }
-    }
-    return str;
-}
 }
