@@ -1,3 +1,5 @@
+[![en](https://img.shields.io/badge/README-english-blue.svg)](https://github.com/2LT-Hyakutaro/otmf/blob/main/README.en.md)
+
 # `otmf` - One Tap, Multi Feature plugin for QField
 
 This QField plugin allows you to instantly place a feature on the map, without having to go through the Feature Form every time.
