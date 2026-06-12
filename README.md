@@ -1,55 +1,24 @@
 [![en](https://img.shields.io/badge/README-english-blue.svg)](https://github.com/2LT-Hyakutaro/otmf/blob/main/README.en.md)
 
-# `otmf` - One Tap, Multi Feature plugin for QField
+# `otmf` - One Tap, Multi Feature 
 
-This QField plugin allows you to instantly place a feature on the map, without having to go through the Feature Form every time.
-Just fill in the feature fields in advance, and place it on the map or on your current location with the push of a button.
-Allows for the creation of different standard features ("templates") that can be replicated at any time by pressing the corresponding button.
+Questo plugin per QField permette di inserire feature in un Layer vettore in modo istantaneo, premendo un solo bottone sullo schermo del proprio dispositivo.
 
-## Missing features
+## Come utilizzare questo plugin
 
-- Support for geometries other than `Point`
-- Different colours for different features
-- Ability to add more than two global attributes
-- Ability to modify a template by long-pressing
-- Template order
+### Installazione tramite QR
 
-## Known bugs 
-- "fid" bug (feature count increases by 2 the first time)
+- Assicurarsi che l'app di QField sul proprio dispositivo abbia l'autorizzazione per l'uso della fotocamera.
+- Su un altro dispositivo, aprire [questa pagina](https://github.com/2LT-Hyakutaro/otmf/releases/tag/v0.1) per visualizzare il codice QR.
+- Aprire le impostazioni di QField. Nel tab `Generale`, cliccare su `Gestisci plugin`.
+- Cliccare su `Installa plugin da URL`, cliccare sul simbolo QR e inquadrare il codice QR aperto sull'altro dispositivo.
+- Cliccare su OK, spuntare `Ricorda la mia scelta` e poi Yes per attivare il plugin.
 
-### example `templates`
+### Installazione tramite link
 
-```
-[
-  {
-    "layer_name" : "cheese",
-    "layer_color" : "yellow",
-    "feature_name" : "venezuelan beaver cheese",
-    "attributes" : {
-      "origin" : "south america",
-      "milk" : "beaver",
-      "quantity" : 0
-    }
-  },
-  {
-    "layer_name" : "cheese",
-    "layer_color" : "yellow",
-    "feature_name" : "camembert",
-    "attributes" : {
-      "origin" : "france",
-      "runny" : true
-    }
-  },
-  {
-    "layer_name" : "chocolate",
-    "layer_color" : "brown",
-    "feature name" : "crunchy frog",
-    "attributes" : {
-      "preservatives" : false,
-      "bones" : true,
-      "frog" : "dead"
-    }
-  }
-]
+- Sul proprio dispositivo mobile, copiare il link del file `otmf.zip` da [questa pagina](https://github.com/2LT-Hyakutaro/otmf/releases/tag/v0.1).
+- Aprire le impostazioni di QField. Nel tab `Generale`, cliccare su `Gestisci plugin`. 
+- Cliccare su `Installa plugin da URL` e incollare il link copiato.
+- Cliccare su OK, spuntare `Ricorda la mia scelta` e poi Yes per attivare il plugin.
 
-```
+
