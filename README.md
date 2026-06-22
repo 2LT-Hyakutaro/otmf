@@ -38,4 +38,11 @@ Questo plugin permette di inserire feature in un layer vettore senza utilizzare 
 #### Replicare una feature
 
 Una volta che una feature 'standard' è stata creata, può essere replicata semplicamente cliccando sul tasto con il nome selezionato durante la creazione.
-Di default, la feature viene posizionata sulla posizione corrente del dispositivo
+Di default, la feature viene posizionata in corrispondenza della posizione corrente; se invece il GPS non è attivo, al primo click prima comparirà un messaggio di avviso, mentre con un secondo click la feature verrà posizionata in corrispondenza della posizione del cursore.
+La feature così posizionata avrà gli stessi attributi impostati durante la creazione della 'standard'.
+
+#### Attributi condivisi
+
+È possibile impostare fino a due attributi che saranno condivisi da tutte le feature 'standard' di tutti i layer. Utile se vari layer presentano tutti uno stesso campo.
+Per farlo, tenere premuto il tasto con il logo OTMF per qualche secondo.
+
